@@ -1,0 +1,236 @@
+---
+# tasks file for kevensen.oc-project-migrator
+- name: Get Project {{ project_name }}
+  oc:
+    state: present
+    kind: Project
+    name: "{{ project_name }}"
+  register: project
+  delegate_to: "{{ from_host }}"
+  delegate_facts: True
+#
+- name: Migrate Project {{ project_name }}
+  oc:
+    state: present
+    inline:
+      kind: ProjectRequest
+      metadata:
+        name: "{{ project.ansible_facts.oc.result.metadata.name }}{{ project_name_postpend }}"
+
+- name: Set Project name
+  set_fact:
+    dest_project_name: "{{ project.ansible_facts.oc.result.metadata.name }}{{ project_name_postpend }}"
+
+- name: Ensure user {{ user_name }} exists
+  oc:
+    state: present
+    inline:
+      kind: User
+      fullName: "{{ user_name }}"
+      metadata:
+        name: "{{ user_name }}"
+
+- pause:
+    seconds: 10
+
+- name: Ensure user {{ user_name }} has "{{ project_role }}" role in project "{{ dest_project_name }}"
+  oc:
+    state: present
+    inline:
+      kind: RoleBinding
+      metadata:
+        name: "{{ project_role }}"
+        namespace: "{{ dest_project_name }}"
+      roleRef:
+        name: "{{ project_role }}"
+      userNames:
+      - "{{ user_name }}"
+
+- name: Get Services
+  oc:
+    state: present
+    kind: Service
+    name: "{{ item }}"
+    namespace: "{{ project_name }}"
+  register: services
+  with_items: "{{ services_to_migrate }}"
+  delegate_to: "{{ from_host }}"
+  delegate_facts: True
+
+- name: Migrate Services
+  oc:
+    state: present
+    namespace: "{{ dest_project_name }}"
+    inline: "{{ item.ansible_facts.oc.result }}"
+  with_items: "{{ services.results }}"
+
+- name: Get Service Accounts
+  oc:
+    state: present
+    kind: ServiceAccount
+    name: "{{ item }}"
+    namespace: "{{ project_name }}"
+  register: service_accounts
+  with_items: "{{ service_accounts_to_migrate }}"
+  delegate_to: "{{ from_host }}"
+  delegate_facts: True
+
+- name: Migrate Service Accounts
+  oc:
+    state: present
+    namespace: "{{ dest_project_name }}"
+    inline: "{{ item.ansible_facts.oc.result }}"
+  with_items: "{{ service_accounts.results }}"
+
+- name: Get Secrets
+  oc:
+    state: present
+    kind: Secret
+    name: "{{ item }}"
+    namespace: "{{ project_name }}"
+  register: secrets
+  with_items: "{{ secrets_to_migrate }}"
+  delegate_to: "{{ from_host }}"
+  delegate_facts: True
+
+- name: Migrate Secrets
+  oc:
+    state: present
+    namespace: "{{ dest_project_name }}"
+    inline: "{{ item.ansible_facts.oc.result }}"
+  with_items: "{{ secrets.results }}"
+
+- name: Get Routes
+  oc:
+    state: present
+    kind: Route
+    name: "{{ item }}"
+    namespace: "{{ project_name }}"
+  register: routes
+  with_items: "{{ routes_to_migrate }}"
+  delegate_to: "{{ from_host }}"
+  delegate_facts: True
+
+- name: Migrate Routes
+  oc:
+    state: present
+    inline:
+      kind: "{{ item.ansible_facts.oc.result.kind }}"
+      apiVersion: "{{ item.ansible_facts.oc.result.apiVersion }}"
+      metadata:
+        name: "{{ item.ansible_facts.oc.result.metadata.name }}"
+        namespace: "{{ dest_project_name }}"
+        labels: "{{ item.ansible_facts.oc.result.metadata.labels }}"
+      spec:
+        to: "{{ item.ansible_facts.oc.result.spec.to }}"
+        host: ''
+  with_items: "{{ routes.results }}"
+
+
+- name: Get Image Streams
+  oc:
+    state: present
+    kind: ImageStream
+    name: "{{ item }}"
+    namespace: "{{ project_name }}"
+  register: image_streams
+  with_items: "{{ image_streams_to_migrate }}"
+
+- block:
+  - name: Get Container Registry Route
+    oc:
+      state: present
+      kind: Route
+      name: docker-registry
+      namespace: default
+    delegate_to: "{{ from_host }}"
+    delegate_facts: True
+    register: registry_route
+  - name: Migrate Image Streams Different Clusters
+    oc:
+      state: present
+      inline:
+        kind: ImageStream
+        apiVersion: "{{ item.ansible_facts.oc.result.apiVersion }}"
+        metadata:
+          name: "{{ item.ansible_facts.oc.result.metadata.name }}"
+          namespace: "{{ dest_project_name }}"
+          annotations: "{{ item.ansible_facts.oc.result.metadata.annotations }}"
+          labels: "{{ item.ansible_facts.oc.result.metadata.labels }}"
+        spec:
+          dockerImageRepository: "{{ registry_route.ansible_facts.oc.result.spec.host }}/testproject-test/cakephp-mysql-example"
+    with_items: "{{ image_streams.results }}"
+  when: inventory_hostname != from_host
+
+- name: Migrate Image Streams Same Cluster
+  oc:
+    state: present
+    inline:
+      kind: ImageStream
+      apiVersion: "{{ item.ansible_facts.oc.result.apiVersion }}"
+      metadata:
+        name: "{{ item.ansible_facts.oc.result.metadata.name }}"
+        namespace: "{{ dest_project_name }}"
+        annotations: "{{ item.ansible_facts.oc.result.metadata.annotations }}"
+        labels: "{{ item.ansible_facts.oc.result.metadata.labels }}"
+      spec:
+        dockerImageRepository: "{{ item.ansible_facts.oc.result.status.dockerImageRepository }}"
+  with_items: "{{ image_streams.results }}"
+  when: inventory_hostname == from_host
+
+
+- block:
+  - name: Get Service Account Docker Configs
+    oc:
+      state: present
+      kind: Secret
+      namespace: "{{ project_name }}"
+      fieldSelector: "type=kubernetes.io/dockercfg"
+    register: tokens
+
+  - name: Migrate Service Account Docker Configs
+    oc:
+      state: present
+      inline:
+        kind: Secret
+        apiVersion: "{{ tokens.ansible_facts.oc.result.apiVersion }}"
+        metadata:
+          name: "{{ item['metadata']['name'] }}-{{ project_name }}"
+          namespace: "{{ dest_project_name }}"
+          annotations:
+            kubernetes.io/service-account.name: "{{ item['metadata']['annotations']['kubernetes.io/service-account.name'] }}"
+        data: "{{ item['data'] | base64decode | regex_replace }}"
+        type: "{{ item['type'] }}"
+    with_items: "{{ tokens.ansible_facts.oc.result.item_list }}"
+  when: inventory_hostname != from_host
+
+- name: Ensure service account has image-puller role from project "{{ dest_project_name }} to {{ project_name }}"
+  oc:
+    state: present
+    inline:
+      kind: RoleBinding
+      metadata:
+        name: "system:image-pullers"
+        namespace: "{{ project_name }}"
+      roleRef:
+        name: "system:image-puller"
+      groupNames:
+      - "system:serviceaccounts:{{ project_name }}"
+      - "system:serviceaccounts:{{ dest_project_name }}"
+  when: inventory_hostname == from_host
+
+- name: Get Deployments
+  oc:
+    state: present
+    kind: DeploymentConfig
+    name: "{{ item }}"
+    namespace: "{{ project_name }}"
+  register: deployment_configs
+  with_items: "{{ deployments_to_migrate }}"
+
+- name: Migrate Deployments
+  oc:
+    state: present
+    namespace: "{{ dest_project_name }}"
+    inline: "{{ item.ansible_facts.oc.result }}"
+  with_items: "{{ deployment_configs.results }}"

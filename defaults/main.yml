@@ -1,0 +1,9 @@
+---
+# defaults file for kevensen.oc-project-migrator
+services_to_migrate: []
+routes_to_migrate: []
+image_streams_to_migrate: []
+secrets_to_migrate: []
+service_accounts_to_migrate: []
+project_name_postpend: ''
+project_role: 'view'
