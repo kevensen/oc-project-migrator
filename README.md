@@ -41,6 +41,7 @@ role_bindings_to_migrate:
 project_role: 'view'
 # The name of the project to Migrate
 project_name: ''
+```
 
 Dependencies
 ------------
@@ -75,7 +76,6 @@ The following example shows how one can use this role to create a project.
     deployments_to_migrate:
     - cakephp-mysql-example
     - mysql
-
 ```
 
 License
