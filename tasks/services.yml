@@ -1,0 +1,19 @@
+---
+# tasks file for kevensen.oc-project-migrator
+- name: Get Services
+  oc:
+    state: present
+    kind: Service
+    name: "{{ item }}"
+    namespace: "{{ project_name }}"
+  register: services
+  with_items: "{{ services_to_migrate }}"
+  delegate_to: "{{ from_host }}"
+  delegate_facts: True
+
+- name: Migrate Services
+  oc:
+    state: present
+    namespace: "{{ dest_project_name }}"
+    inline: "{{ item.ansible_facts.oc.result | uniqueify_resource }}"
+  with_items: "{{ services.results }}"

@@ -1,0 +1,51 @@
+---
+# tasks file for kevensen.oc-project-migrator
+- name: Get Image Streams
+  oc:
+    state: present
+    kind: ImageStream
+    name: "{{ item }}"
+    namespace: "{{ project_name }}"
+  register: image_streams
+  with_items: "{{ image_streams_to_migrate }}"
+
+- block:
+  - name: Get Container Registry Route
+    oc:
+      state: present
+      kind: Route
+      name: docker-registry
+      namespace: default
+    delegate_to: "{{ from_host }}"
+    delegate_facts: True
+    register: registry_route
+  - name: Migrate Image Streams Different Clusters
+    oc:
+      state: present
+      inline:
+        kind: ImageStream
+        apiVersion: "{{ item.ansible_facts.oc.result.apiVersion }}"
+        metadata:
+          name: "{{ item.ansible_facts.oc.result.metadata.name }}"
+          namespace: "{{ dest_project_name }}"
+          annotations: "{{ item.ansible_facts.oc.result.metadata.annotations }}"
+          labels: "{{ item.ansible_facts.oc.result.metadata.labels }}"
+        spec:
+          dockerImageRepository: "{{ registry_route.ansible_facts.oc.result.spec.host }}/testproject-test/cakephp-mysql-example"
+    with_items: "{{ image_streams.results }}"
+  when: inventory_hostname != from_host
+
+- name: Migrate Image Streams Same Cluster
+  oc:
+    state: present
+    inline:
+      kind: ImageStream
+      apiVersion: "{{ item.ansible_facts.oc.result.apiVersion }}"
+      metadata:
+        name: "{{ item.ansible_facts.oc.result.metadata.name }}"
+        namespace: "{{ dest_project_name }}"
+        annotations: "{{ item.ansible_facts.oc.result.metadata.annotations }}"
+        labels: "{{ item.ansible_facts.oc.result.metadata.labels }}"
+      spec:
+        dockerImageRepository: "{{ item.ansible_facts.oc.result.status.dockerImageRepository }}"
+  with_items: "{{ image_streams.results }}"

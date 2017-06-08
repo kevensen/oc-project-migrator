@@ -1,0 +1,27 @@
+---
+# tasks file for kevensen.oc-project-migrator
+- name: Get Routes
+  oc:
+    state: present
+    kind: Route
+    name: "{{ item }}"
+    namespace: "{{ project_name }}"
+  register: routes
+  with_items: "{{ routes_to_migrate }}"
+  delegate_to: "{{ from_host }}"
+  delegate_facts: True
+#
+- name: Migrate Routes
+  oc:
+    state: present
+    inline:
+      kind: "{{ item.ansible_facts.oc.result.kind }}"
+      apiVersion: "{{ item.ansible_facts.oc.result.apiVersion }}"
+      metadata:
+        name: "{{ item.ansible_facts.oc.result.metadata.name }}"
+        namespace: "{{ dest_project_name }}"
+        labels: "{{ item.ansible_facts.oc.result.metadata.labels }}"
+      spec:
+        to: "{{ item.ansible_facts.oc.result.spec.to }}"
+        host: ''
+  with_items: "{{ routes.results }}"

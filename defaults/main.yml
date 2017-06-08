@@ -16,6 +16,10 @@ deployments_to_migrate: []
 # name. This is essential if you are migrating
 # to the same cluster.
 project_name_postpend: ''
+# The Role Bindings to Migrate.  This will
+# include both users and groups with this binding.
+role_bindings_to_migrate:
+- admin
 # The default project role for the user
-#migrating the project
+# migrating the project
 project_role: 'view'

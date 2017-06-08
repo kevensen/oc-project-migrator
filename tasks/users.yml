@@ -1,0 +1,43 @@
+---
+# tasks file for kevensen.oc-project-migrator
+- name: Get users with specified RoleBinding
+  oc:
+    state: present
+    namespace: "{{ project_name }}"
+    kind: RoleBinding
+    name: "{{ item }}"
+  register: role_bindings
+  with_items: "{{ role_bindings_to_migrate }}"
+  delegate_to: "{{ from_host }}"
+  delegate_facts: True
+
+- name: Ensure project users are present in destination cluster
+  oc:
+    state: present
+    inline:
+      kind: User
+      fullName: "{{ item.1 }}"
+      metadata:
+        name: "{{ item.1 }}"
+  with_subelements:
+  - "{{ role_bindings.results }}"
+  - ansible_facts.oc.result.userNames
+
+- pause:
+    seconds: 15
+
+- name: Ensure users have "{{ project_role }}" role in project "{{ dest_project_name }}"
+  oc:
+    state: present
+    inline:
+      kind: RoleBinding
+      metadata:
+        name: "{{ project_role }}"
+        namespace: "{{ dest_project_name }}"
+      roleRef:
+        name: "{{ project_role }}"
+      userNames:
+      - "{{ item.1 }}"
+  with_subelements:
+  - "{{ role_bindings.results }}"
+  - ansible_facts.oc.result.userNames

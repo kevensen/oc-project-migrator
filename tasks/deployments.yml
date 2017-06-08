@@ -1,0 +1,33 @@
+---
+# tasks file for kevensen.oc-project-migrator
+- name: Get Deployments
+  oc:
+    state: present
+    kind: DeploymentConfig
+    name: "{{ item }}"
+    namespace: "{{ project_name }}"
+  register: deployment_configs
+  with_items: "{{ deployments_to_migrate }}"
+
+- name: Migrate Deployments
+  oc:
+    state: present
+    inline:
+      kind: DeploymentConfig
+      apiVersion: "{{ item.ansible_facts.oc.result.apiVersion }}"
+      metadata:
+        name: "{{ item.ansible_facts.oc.result.metadata.name }}"
+        namespace: "{{ dest_project_name }}"
+        labels: "{{ item.ansible_facts.oc.result.metadata.labels }}"
+        annotations: "{{ item.ansible_facts.oc.result.metadata.annotations }}"
+      spec:
+        strategy: "{{ item.ansible_facts.oc.result.spec.strategy }}"
+        minReadySeconds: "{{ item.ansible_facts.oc.result.spec.minReadySeconds | default(0) }}"
+        triggers: "{{ item.ansible_facts.oc.result.spec.triggers | translate_image_trigger(dest_project_name) }}"
+        replicas: "{{ item.ansible_facts.oc.result.spec.replicas }}"
+        revisionHistoryLimit: "{{ item.ansible_facts.oc.result.spec.revisionHistoryLimit | default(3) }}"
+        test: "{{ item.ansible_facts.oc.result.spec.test | default(false) }}"
+        selector: "{{ item.ansible_facts.oc.result.spec.selector }}"
+        template: "{{ item.ansible_facts.oc.result.spec.template | remove_image }}"
+
+  with_items: "{{ deployment_configs.results }}"

@@ -1,0 +1,22 @@
+---
+# tasks file for kevensen.oc-project-migrator
+- name: Get Project {{ project_name }}
+  oc:
+    state: present
+    kind: Project
+    name: "{{ project_name }}"
+  register: project
+  delegate_to: "{{ from_host }}"
+  delegate_facts: True
+#
+- name: Migrate Project {{ project_name }}
+  oc:
+    state: present
+    inline:
+      kind: ProjectRequest
+      metadata:
+        name: "{{ project.ansible_facts.oc.result.metadata.name }}{{ project_name_postpend }}"
+
+- name: Set Project name
+  set_fact:
+    dest_project_name: "{{ project.ansible_facts.oc.result.metadata.name }}{{ project_name_postpend }}"

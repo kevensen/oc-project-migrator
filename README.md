@@ -15,7 +15,6 @@ The following variables can be found in defaults/main.yml.
 
 ```
 ---
----
 # defaults file for kevensen.oc-project-migrator
 # The Kubernetes Services to Migrate
 services_to_migrate: []
@@ -33,10 +32,15 @@ deployments_to_migrate: []
 # name. This is essential if you are migrating
 # to the same cluster.
 project_name_postpend: ''
+# The Role Bindings to Migrate.  This will
+# include both users and groups with this binding.
+role_bindings_to_migrate:
+- admins
 # The default project role for the user
-#migrating the project
+# migrating the project
 project_role: 'view'
-```
+# The name of the project to Migrate
+project_name: ''
 
 Dependencies
 ------------
@@ -56,6 +60,7 @@ The following example shows how one can use this role to create a project.
   - kevensen.oc-project-migrator
   vars:
     ansible_become: true
+    from_host: openshift
     project_name: cake
     project_name_postpend: '-test'
     services_to_migrate:
@@ -70,6 +75,7 @@ The following example shows how one can use this role to create a project.
     deployments_to_migrate:
     - cakephp-mysql-example
     - mysql
+
 ```
 
 License
