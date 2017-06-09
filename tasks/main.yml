@@ -2,9 +2,10 @@
 # tasks file for kevensen.oc-project-migrator
 - include: project.yml
 - include: users.yml
+- include: routes.yml
 - include: services.yml
 - include: service-accounts.yml
 - include: secrets.yml
-- include: routes.yml
 - include: image-streams.yml
 - include: deployments.yml
+- include: image-import.yml

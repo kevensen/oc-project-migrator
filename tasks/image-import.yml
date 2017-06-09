@@ -1,0 +1,20 @@
+---
+# tasks file for kevensen.oc-project-migrator
+- name: Import Images
+  oc:
+    state: present
+    inline:
+      kind: ImageStreamImport
+      apiVersion: "{{ item.ansible_facts.oc.result.apiVersion }}"
+      metadata:
+        name: "{{ item.ansible_facts.oc.result.metadata.name }}"
+        namespace: "{{ dest_project_name }}"
+        annotations: "{{ item.ansible_facts.oc.result.metadata.annotations }}"
+        labels: "{{ item.ansible_facts.oc.result.metadata.labels }}"
+      spec:
+        import: true
+        images:
+          from:
+            kind: DockerImage
+            name: "{{ registry_route_hostname }}/{{ item.ansible_facts.oc.result.metadata.namespace }}/{{ item.ansible_facts.oc.result.metadata.name }}"
+  with_items: "{{ image_streams.results }}"

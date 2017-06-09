@@ -17,3 +17,17 @@
     namespace: "{{ dest_project_name }}"
     inline: "{{ item.ansible_facts.oc.result | uniqueify_resource }}"
   with_items: "{{ services.results }}"
+
+- name: Get Docker Registry Service
+  oc:
+    state: present
+    namespace: default
+    name: "{{ default_registry_service_name }}"
+    kind: Service
+  delegate_to: "{{ from_host }}"
+  delegate_facts: True
+  register: registry_service
+
+- name: Set Docker Registry Cluster IP
+  set_fact:
+    registry_cluster_ip: "{{ registry_service.ansible_facts.oc.result.spec.clusterIP }}"

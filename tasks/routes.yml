@@ -25,3 +25,17 @@
         to: "{{ item.ansible_facts.oc.result.spec.to }}"
         host: ''
   with_items: "{{ routes.results }}"
+
+- name: Get Container Registry Route
+  oc:
+    state: present
+    kind: Route
+    name: "{{ default_registry_route_name }}"
+    namespace: default
+  delegate_to: "{{ from_host }}"
+  delegate_facts: True
+  register: registry_route
+
+- name: Set Registry Route Hostname
+  set_fact:
+    registry_route_hostname: "{{ registry_route.ansible_facts.oc.result.spec.host }}"

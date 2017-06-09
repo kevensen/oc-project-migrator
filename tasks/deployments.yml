@@ -8,6 +8,9 @@
     namespace: "{{ project_name }}"
   register: deployment_configs
   with_items: "{{ deployments_to_migrate }}"
+  delegate_to: "{{ from_host }}"
+  delegate_facts: True
+
 
 - name: Migrate Deployments
   oc:

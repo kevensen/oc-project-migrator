@@ -8,17 +8,10 @@
     namespace: "{{ project_name }}"
   register: image_streams
   with_items: "{{ image_streams_to_migrate }}"
+  delegate_to: "{{ from_host }}"
+  delegate_facts: True
 
 - block:
-  - name: Get Container Registry Route
-    oc:
-      state: present
-      kind: Route
-      name: docker-registry
-      namespace: default
-    delegate_to: "{{ from_host }}"
-    delegate_facts: True
-    register: registry_route
   - name: Migrate Image Streams Different Clusters
     oc:
       state: present
@@ -31,9 +24,26 @@
           annotations: "{{ item.ansible_facts.oc.result.metadata.annotations }}"
           labels: "{{ item.ansible_facts.oc.result.metadata.labels }}"
         spec:
-          dockerImageRepository: "{{ registry_route.ansible_facts.oc.result.spec.host }}/testproject-test/cakephp-mysql-example"
+          dockerImageRepository: "{{ registry_route_hostname }}/{{ item.ansible_facts.oc.result.metadata.namespace }}/{{ item.ansible_facts.oc.result.metadata.name }}"
     with_items: "{{ image_streams.results }}"
+
+  - name: Configure Insecure ImageStreams
+    oc:
+      state: present
+      inline:
+        kind: ImageStream
+        apiVersion: "{{ item.ansible_facts.oc.result.apiVersion }}"
+        metadata:
+          name: "{{ item.ansible_facts.oc.result.metadata.name }}"
+          namespace: "{{ dest_project_name }}"
+          annotations:
+            openshift.io/image.insecureRepository: "true"
+    when: insecure_image_streams
+    with_items: "{{ image_streams.results }}"
+
   when: inventory_hostname != from_host
+
+
 
 - name: Migrate Image Streams Same Cluster
   oc:
@@ -49,3 +59,4 @@
       spec:
         dockerImageRepository: "{{ item.ansible_facts.oc.result.status.dockerImageRepository }}"
   with_items: "{{ image_streams.results }}"
+  when: inventory_hostname == from_host
