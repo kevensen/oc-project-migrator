@@ -1,33 +1,31 @@
 ---
 # tasks file for kevensen.oc-project-migrator
-- name: Get Image Streams
-  oc:
-    state: present
-    kind: ImageStream
-    namespace: "{{ project_name }}"
-  register: image_streams
+- block:
+  - name: Get Image Streams
+    oc:
+      state: present
+      kind: ImageStream
+      namespace: "{{ project_name }}"
+    register: image_streams
 
-- debug:
-    var: image_streams
-
-- name: Import Images
-  oc:
-    state: present
-    inline:
-      kind: ImageStreamImport
-      apiVersion: "{{ image_streams.ansible_facts.oc.result.apiVersion }}"
-      metadata:
-        name: "{{ item.metadata.name }}"
-        namespace: "{{ item.metadata.namespace }}"
-      spec:
-        import: true
-        images:
-        - to:
-            name: latest
-          from:
-            kind: DockerImage
-            name: "{{ item.spec.dockerImageRepository }}"
-          importPolicy:
-            insecure: "{{ insecure_image_streams }}"
-  with_items: "{{ image_streams.ansible_facts.oc.result.item_list }}"
+  - name: Import Images
+    oc:
+      state: present
+      inline:
+        kind: ImageStreamImport
+        apiVersion: "{{ image_streams.ansible_facts.oc.result.apiVersion }}"
+        metadata:
+          name: "{{ item.metadata.name }}"
+          namespace: "{{ item.metadata.namespace }}"
+        spec:
+          import: true
+          images:
+          - to:
+              name: latest
+            from:
+              kind: DockerImage
+              name: "{{ item.spec.dockerImageRepository }}"
+            importPolicy:
+              insecure: "{{ insecure_image_streams }}"
+    with_items: "{{ image_streams.ansible_facts.oc.result.item_list }}"
   when: inventory_hostname != from_host
