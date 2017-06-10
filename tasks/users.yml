@@ -41,4 +41,4 @@
       - "{{ item.1 }}"
   with_subelements:
   - "{{ role_bindings.results }}"
-  - "{{ ansible_facts.oc.result.userNames }}"
+  - ansible_facts.oc.result.userNames
