@@ -35,6 +35,7 @@ insecure_image_streams: false
 
 # The default name of the cluster's container registry service
 default_registry_service_name: docker-registry
+
 # The default name of the cluster's container registry route
 default_registry_route_name: docker-registry
 

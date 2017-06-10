@@ -18,29 +18,46 @@ The following variables can be found in defaults/main.yml.
 # defaults file for kevensen.oc-project-migrator
 # The Kubernetes Services to Migrate
 services_to_migrate: []
+
 # The Container Routes to Migrate
 routes_to_migrate: []
+
 # The Image Streams to Migrate
 image_streams_to_migrate: []
+
 # The Kubernetes Secrets to Migrate
 secrets_to_migrate: []
+
 # The Kubernetes Service Accounts to Migrate
 service_accounts_to_migrate: []
+
 # The Deployment Configurations to Migrate
 deployments_to_migrate: []
+
 # Add a string to the end of the project
 # name. This is essential if you are migrating
 # to the same cluster.
 project_name_postpend: ''
+
 # The Role Bindings to Migrate.  This will
 # include both users and groups with this binding.
 role_bindings_to_migrate:
-- admins
+- admin
+
+# If the image stream you wish to pull from is insecure,
+# this should be set as true.  This value is only important
+# when the source and destination clusters are not the same.
+insecure_image_streams: false
+
+# The default name of the cluster's container registry service
+default_registry_service_name: docker-registry
+
+# The default name of the cluster's container registry route
+default_registry_route_name: docker-registry
+
 # The default project role for the user
 # migrating the project
 project_role: 'view'
-# The name of the project to Migrate
-project_name: ''
 ```
 
 Dependencies
