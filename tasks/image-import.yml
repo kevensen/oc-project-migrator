@@ -30,3 +30,4 @@
           importPolicy:
             insecure: "{{ insecure_image_streams }}"
   with_items: "{{ image_streams.ansible_facts.oc.result.item_list }}"
+  when: inventory_hostname != from_host
