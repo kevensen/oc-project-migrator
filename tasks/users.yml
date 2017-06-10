@@ -21,7 +21,8 @@
         name: "{{ item.1 }}"
   with_subelements:
   - "{{ role_bindings.results }}"
-  - ansible_facts.oc.result.userNames | remove_system_users
+  - ansible_facts.oc.result.userNames
+  ignore_errors: yes
 
 - pause:
     seconds: 15
