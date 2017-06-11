@@ -6,6 +6,9 @@ services_to_migrate: []
 # The Container Routes to Migrate
 routes_to_migrate: []
 
+# The Persistent Volume Claims to Migrate
+pvcs_to_migrate: []
+
 # The Image Streams to Migrate
 image_streams_to_migrate: []
 

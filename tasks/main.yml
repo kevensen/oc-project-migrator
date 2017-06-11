@@ -6,6 +6,7 @@
 - include: services.yml
 - include: service-accounts.yml
 - include: secrets.yml
+- include: persistent-volume-claims.yml
 - include: image-streams.yml
 - include: deployments.yml
 - include: image-import.yml
