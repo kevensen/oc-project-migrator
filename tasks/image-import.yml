@@ -6,6 +6,7 @@
       state: present
       kind: ImageStream
       namespace: "{{ project_name }}"
+      validate_certs: "{{ validate_certs }}"
     register: image_streams
 
   - name: Import Images
@@ -27,5 +28,6 @@
               name: "{{ item.spec.dockerImageRepository }}"
             importPolicy:
               insecure: "{{ insecure_image_streams }}"
+        validate_certs: "{{ validate_certs }}"
     with_items: "{{ image_streams.ansible_facts.oc.result.item_list }}"
   when: inventory_hostname != from_host

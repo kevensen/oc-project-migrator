@@ -6,6 +6,7 @@
     kind: Route
     name: "{{ item }}"
     namespace: "{{ project_name }}"
+    validate_certs: "{{ validate_certs }}"
   register: routes
   with_items: "{{ routes_to_migrate }}"
   delegate_to: "{{ from_host }}"
@@ -24,6 +25,7 @@
       spec:
         to: "{{ item.ansible_facts.oc.result.spec.to }}"
         host: ''
+      validate_certs: "{{ validate_certs }}"
   with_items: "{{ routes.results }}"
 
 - name: Get Container Registry Route
@@ -32,6 +34,7 @@
     kind: Route
     name: "{{ default_registry_route_name }}"
     namespace: default
+    validate_certs: "{{ validate_certs }}"
   delegate_to: "{{ from_host }}"
   delegate_facts: True
   register: registry_route

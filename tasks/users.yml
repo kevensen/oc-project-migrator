@@ -6,6 +6,7 @@
     namespace: "{{ project_name }}"
     kind: RoleBinding
     name: "{{ item }}"
+    validate_certs: "{{ validate_certs }}"
   register: role_bindings
   with_items: "{{ role_bindings_to_migrate }}"
   delegate_to: "{{ from_host }}"
@@ -19,6 +20,7 @@
       fullName: "{{ item.1 }}"
       metadata:
         name: "{{ item.1 }}"
+    validate_certs: "{{ validate_certs }}"
   with_subelements:
   - "{{ role_bindings.results }}"
   - ansible_facts.oc.result.userNames
@@ -39,6 +41,7 @@
         name: "{{ project_role }}"
       userNames:
       - "{{ item.1 }}"
+    validate_certs: "{{ validate_certs }}"
   with_subelements:
   - "{{ role_bindings.results }}"
   - ansible_facts.oc.result.userNames

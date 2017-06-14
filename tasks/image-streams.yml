@@ -10,6 +10,7 @@
   with_items: "{{ image_streams_to_migrate }}"
   delegate_to: "{{ from_host }}"
   delegate_facts: True
+  validate_certs: "{{ validate_certs }}"
 
 - block:
   - name: Migrate Image Streams Different Clusters
@@ -25,6 +26,7 @@
           labels: "{{ item.ansible_facts.oc.result.metadata.labels }}"
         spec:
           dockerImageRepository: "{{ registry_route_hostname }}/{{ item.ansible_facts.oc.result.metadata.namespace }}/{{ item.ansible_facts.oc.result.metadata.name }}"
+      validate_certs: "{{ validate_certs }}"
     with_items: "{{ image_streams.results }}"
 
   - name: Configure Insecure ImageStreams
@@ -38,6 +40,7 @@
           namespace: "{{ dest_project_name }}"
           annotations:
             openshift.io/image.insecureRepository: "true"
+      validate_certs: "{{ validate_certs }}"
     when: insecure_image_streams
     with_items: "{{ image_streams.results }}"
 
@@ -58,5 +61,6 @@
         labels: "{{ item.ansible_facts.oc.result.metadata.labels }}"
       spec:
         dockerImageRepository: "{{ item.ansible_facts.oc.result.status.dockerImageRepository }}"
+    validate_certs: "{{ validate_certs }}"
   with_items: "{{ image_streams.results }}"
   when: inventory_hostname == from_host

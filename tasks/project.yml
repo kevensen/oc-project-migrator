@@ -5,6 +5,7 @@
     state: present
     kind: Project
     name: "{{ project_name }}"
+    validate_certs: "{{ validate_certs }}"
   register: project
   delegate_to: "{{ from_host }}"
   delegate_facts: True
@@ -16,6 +17,7 @@
       kind: ProjectRequest
       metadata:
         name: "{{ project.ansible_facts.oc.result.metadata.name }}{{ project_name_postpend }}"
+    validate_certs: "{{ validate_certs }}"
 
 - name: Set Project name
   set_fact:
