@@ -6,11 +6,12 @@
     kind: DeploymentConfig
     name: "{{ item }}"
     namespace: "{{ project_name }}"
+    validate_certs: "{{ validate_certs }}"
   register: deployment_configs
   with_items: "{{ deployments_to_migrate }}"
   delegate_to: "{{ from_host }}"
   delegate_facts: True
-  validate_certs: "{{ validate_certs }}"
+
 
 
 - name: Migrate Deployments

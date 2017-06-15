@@ -9,7 +9,7 @@
   register: project
   delegate_to: "{{ from_host }}"
   delegate_facts: True
-#
+
 - name: Migrate Project {{ project_name }}
   oc:
     state: present

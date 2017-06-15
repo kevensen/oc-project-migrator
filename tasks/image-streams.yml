@@ -6,11 +6,12 @@
     kind: ImageStream
     name: "{{ item }}"
     namespace: "{{ project_name }}"
+    validate_certs: "{{ validate_certs }}"
   register: image_streams
   with_items: "{{ image_streams_to_migrate }}"
   delegate_to: "{{ from_host }}"
   delegate_facts: True
-  validate_certs: "{{ validate_certs }}"
+
 
 - block:
   - name: Migrate Image Streams Different Clusters
