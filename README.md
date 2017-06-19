@@ -8,6 +8,8 @@ Requirements
 
 At least one operational OpenShift Container Platform cluster.
 
+kevensen.oc
+
 Role Variables
 --------------
 
@@ -58,6 +60,15 @@ default_registry_route_name: docker-registry
 # The default project role for the user
 # migrating the project
 project_role: 'view'
+```
+
+The following variables should be set as parameters.
+```
+# Whether or not to validate the TLS certs of the API endpoint
+validate_certs: true
+
+# The token of the service account with which to access the API
+ansible_sa_token: abcdefg
 ```
 
 Dependencies
