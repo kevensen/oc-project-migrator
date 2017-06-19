@@ -1,17 +1,15 @@
 ---
-# tasks file for kevensen.oc-project-migrator
 - name: Get Deployments
-  oc:
-    state: present
-    kind: DeploymentConfig
-    name: "{{ item }}"
-    namespace: "{{ project_name }}"
-    validate_certs: "{{ validate_certs }}"
-  register: deployment_configs
+  set_fact:
+    deployment: "{{ lookup('oc',
+                           'DeploymentConfig',
+                            host=from_host,
+                            token=hostvars[from_host]['ansible_sa_token'],
+                            namespace=project_name,
+                            resource_name=item,
+                            validate_certs=validate_certs) }}"
   with_items: "{{ deployments_to_migrate }}"
-  delegate_to: "{{ from_host }}"
-  delegate_facts: True
-
+  register: deployments
 
 
 - name: Migrate Deployments
@@ -19,20 +17,21 @@
     state: present
     inline:
       kind: DeploymentConfig
-      apiVersion: "{{ item.ansible_facts.oc.result.apiVersion }}"
+      apiVersion: "{{ item.ansible_facts.deployment.apiVersion }}"
       metadata:
-        name: "{{ item.ansible_facts.oc.result.metadata.name }}"
+        name: "{{ item.ansible_facts.deployment.metadata.name }}"
         namespace: "{{ dest_project_name }}"
-        labels: "{{ item.ansible_facts.oc.result.metadata.labels }}"
-        annotations: "{{ item.ansible_facts.oc.result.metadata.annotations }}"
+        labels: "{{ item.ansible_facts.deployment.metadata.labels }}"
+        annotations: "{{ item.ansible_facts.deployment.metadata.annotations }}"
       spec:
-        strategy: "{{ item.ansible_facts.oc.result.spec.strategy }}"
-        minReadySeconds: "{{ item.ansible_facts.oc.result.spec.minReadySeconds | default(0) }}"
-        triggers: "{{ item.ansible_facts.oc.result.spec.triggers | translate_image_trigger(dest_project_name) }}"
-        replicas: "{{ item.ansible_facts.oc.result.spec.replicas }}"
-        revisionHistoryLimit: "{{ item.ansible_facts.oc.result.spec.revisionHistoryLimit | default(3) }}"
-        test: "{{ item.ansible_facts.oc.result.spec.test | default(false) }}"
-        selector: "{{ item.ansible_facts.oc.result.spec.selector }}"
-        template: "{{ item.ansible_facts.oc.result.spec.template | remove_image }}"
-      validate_certs: "{{ validate_certs }}"
-  with_items: "{{ deployment_configs.results }}"
+        strategy: "{{ item.ansible_facts.deployment.spec.strategy }}"
+        minReadySeconds: "{{ item.ansible_facts.deployment.spec.minReadySeconds | default(0) }}"
+        triggers: "{{ item.ansible_facts.deployment.spec.triggers | translate_image_trigger(dest_project_name) }}"
+        replicas: "{{ item.ansible_facts.deployment.spec.replicas }}"
+        revisionHistoryLimit: "{{ item.ansible_facts.deployment.spec.revisionHistoryLimit | default(3) }}"
+        test: "{{ item.ansible_facts.deployment.spec.test | default(false) }}"
+        selector: "{{ item.ansible_facts.deployment.spec.selector }}"
+        template: "{{ item.ansible_facts.deployment.spec.template | remove_image }}"
+    validate_certs: "{{ validate_certs }}"
+    token: "{{ ansible_sa_token }}"
+  with_items: "{{ deployments.results }}"

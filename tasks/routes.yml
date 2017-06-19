@@ -1,44 +1,43 @@
 ---
-# tasks file for kevensen.oc-project-migrator
 - name: Get Routes
-  oc:
-    state: present
-    kind: Route
-    name: "{{ item }}"
-    namespace: "{{ project_name }}"
-    validate_certs: "{{ validate_certs }}"
-  register: routes
+  set_fact:
+    route: "{{ lookup('oc',
+                      'Route',
+                      host=from_host,
+                      token=hostvars[from_host]['ansible_sa_token'],
+                      namespace=project_name,
+                      resource_name=item,
+                      validate_certs=validate_certs) }}"
   with_items: "{{ routes_to_migrate }}"
-  delegate_to: "{{ from_host }}"
-  delegate_facts: True
-#
+  register: routes
+
 - name: Migrate Routes
   oc:
     state: present
     inline:
-      kind: "{{ item.ansible_facts.oc.result.kind }}"
-      apiVersion: "{{ item.ansible_facts.oc.result.apiVersion }}"
+      kind: "{{ item.ansible_facts.route.kind }}"
+      apiVersion: "{{ item.ansible_facts.route.apiVersion }}"
       metadata:
-        name: "{{ item.ansible_facts.oc.result.metadata.name }}"
+        name: "{{ item.ansible_facts.route.metadata.name }}"
         namespace: "{{ dest_project_name }}"
-        labels: "{{ item.ansible_facts.oc.result.metadata.labels }}"
+        labels: "{{ item.ansible_facts.route.metadata.labels }}"
       spec:
-        to: "{{ item.ansible_facts.oc.result.spec.to }}"
+        to: "{{ item.ansible_facts.route.spec.to }}"
         host: ''
-      validate_certs: "{{ validate_certs }}"
+    validate_certs: "{{ validate_certs }}"
+    token: "{{ ansible_sa_token }}"
   with_items: "{{ routes.results }}"
 
-- name: Get Container Registry Route
-  oc:
-    state: present
-    kind: Route
-    name: "{{ default_registry_route_name }}"
-    namespace: default
-    validate_certs: "{{ validate_certs }}"
-  delegate_to: "{{ from_host }}"
-  delegate_facts: True
-  register: registry_route
+- name: Get Routes
+  set_fact:
+    route: "{{ lookup('oc',
+                      'Route',
+                      host=from_host,
+                      token=hostvars[from_host]['ansible_sa_token'],
+                      namespace='default',
+                      resource_name='docker-registry',
+                      validate_certs=validate_certs) }}"
 
 - name: Set Registry Route Hostname
   set_fact:
-    registry_route_hostname: "{{ registry_route.ansible_facts.oc.result.spec.host }}"
+    registry_route_hostname: "{{ route.spec.host }}"

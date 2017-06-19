@@ -1,17 +1,15 @@
 ---
-# tasks file for kevensen.oc-project-migrator
 - name: Get Image Streams
-  oc:
-    state: present
-    kind: ImageStream
-    name: "{{ item }}"
-    namespace: "{{ project_name }}"
-    validate_certs: "{{ validate_certs }}"
-  register: image_streams
+  set_fact:
+    image_stream: "{{ lookup('oc',
+                             'ImageStream',
+                             host=from_host,
+                             token=hostvars[from_host]['ansible_sa_token'],
+                             namespace=project_name,
+                             resource_name=item,
+                             validate_certs=validate_certs) }}"
   with_items: "{{ image_streams_to_migrate }}"
-  delegate_to: "{{ from_host }}"
-  delegate_facts: True
-
+  register: image_streams
 
 - block:
   - name: Migrate Image Streams Different Clusters
@@ -19,15 +17,16 @@
       state: present
       inline:
         kind: ImageStream
-        apiVersion: "{{ item.ansible_facts.oc.result.apiVersion }}"
+        apiVersion: "{{ item.ansible_facts.image_stream.apiVersion }}"
         metadata:
-          name: "{{ item.ansible_facts.oc.result.metadata.name }}"
+          name: "{{ item.ansible_facts.image_stream.metadata.name }}"
           namespace: "{{ dest_project_name }}"
-          annotations: "{{ item.ansible_facts.oc.result.metadata.annotations }}"
-          labels: "{{ item.ansible_facts.oc.result.metadata.labels }}"
+          annotations: "{{ item.ansible_facts.image_stream.metadata.annotations }}"
+          labels: "{{ item.ansible_facts.image_stream.metadata.labels }}"
         spec:
-          dockerImageRepository: "{{ registry_route_hostname }}/{{ item.ansible_facts.oc.result.metadata.namespace }}/{{ item.ansible_facts.oc.result.metadata.name }}"
+          dockerImageRepository: "{{ registry_route_hostname }}/{{ item.ansible_facts.image_stream.metadata.namespace }}/{{ item.ansible_facts.image_stream.metadata.name }}"
       validate_certs: "{{ validate_certs }}"
+      token: "{{ ansible_sa_token }}"
     with_items: "{{ image_streams.results }}"
 
   - name: Configure Insecure ImageStreams
@@ -35,13 +34,14 @@
       state: present
       inline:
         kind: ImageStream
-        apiVersion: "{{ item.ansible_facts.oc.result.apiVersion }}"
+        apiVersion: "{{ item.ansible_facts.image_stream.apiVersion }}"
         metadata:
-          name: "{{ item.ansible_facts.oc.result.metadata.name }}"
+          name: "{{ item.ansible_facts.image_stream.metadata.name }}"
           namespace: "{{ dest_project_name }}"
           annotations:
             openshift.io/image.insecureRepository: "true"
       validate_certs: "{{ validate_certs }}"
+      token: "{{ ansible_sa_token }}"
     when: insecure_image_streams
     with_items: "{{ image_streams.results }}"
 
@@ -54,14 +54,15 @@
     state: present
     inline:
       kind: ImageStream
-      apiVersion: "{{ item.ansible_facts.oc.result.apiVersion }}"
+      apiVersion: "{{ item.ansible_facts.image_stream.apiVersion }}"
       metadata:
-        name: "{{ item.ansible_facts.oc.result.metadata.name }}"
+        name: "{{ item.ansible_facts.image_stream.metadata.name }}"
         namespace: "{{ dest_project_name }}"
-        annotations: "{{ item.ansible_facts.oc.result.metadata.annotations }}"
-        labels: "{{ item.ansible_facts.oc.result.metadata.labels }}"
+        annotations: "{{ item.ansible_facts.image_stream.metadata.annotations }}"
+        labels: "{{ item.ansible_facts.image_stream.metadata.labels }}"
       spec:
-        dockerImageRepository: "{{ item.ansible_facts.oc.result.status.dockerImageRepository }}"
+        dockerImageRepository: "{{ item.ansible_facts.image_stream.status.dockerImageRepository }}"
     validate_certs: "{{ validate_certs }}"
+    token: "{{ ansible_sa_token }}"
   with_items: "{{ image_streams.results }}"
   when: inventory_hostname == from_host

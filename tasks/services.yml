@@ -1,36 +1,35 @@
 ---
-# tasks file for kevensen.oc-project-migrator
 - name: Get Services
-  oc:
-    state: present
-    kind: Service
-    name: "{{ item }}"
-    namespace: "{{ project_name }}"
-    validate_certs: "{{ validate_certs }}"
-  register: services
+  set_fact:
+    service: "{{ lookup('oc',
+                        'Service',
+                        host=from_host,
+                        token=hostvars[from_host]['ansible_sa_token'],
+                        namespace=project_name,
+                        resource_name=item,
+                        validate_certs=validate_certs) }}"
   with_items: "{{ services_to_migrate }}"
-  delegate_to: "{{ from_host }}"
-  delegate_facts: True
+  register: services
 
 - name: Migrate Services
   oc:
     state: present
     namespace: "{{ dest_project_name }}"
-    inline: "{{ item.ansible_facts.oc.result | uniqueify_resource }}"
+    inline: "{{ item.ansible_facts.service | uniqueify_resource }}"
     validate_certs: "{{ validate_certs }}"
+    token: "{{ ansible_sa_token }}"
   with_items: "{{ services.results }}"
 
 - name: Get Docker Registry Service
-  oc:
-    state: present
-    namespace: default
-    name: "{{ default_registry_service_name }}"
-    kind: Service
-    validate_certs: "{{ validate_certs }}"
-  delegate_to: "{{ from_host }}"
-  delegate_facts: True
-  register: registry_service
+  set_fact:
+    service: "{{ lookup('oc',
+                        'Service',
+                        host=from_host,
+                        token=hostvars[from_host]['ansible_sa_token'],
+                        namespace='default',
+                        resource_name='docker-registry',
+                        validate_certs=validate_certs) }}"
 
 - name: Set Docker Registry Cluster IP
   set_fact:
-    registry_cluster_ip: "{{ registry_service.ansible_facts.oc.result.spec.clusterIP }}"
+    registry_cluster_ip: "{{ service.spec.clusterIP }}"

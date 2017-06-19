@@ -1,21 +1,23 @@
 ---
 # tasks file for kevensen.oc-project-migrator
+
 - name: Get Persistent Volume Claims
-  oc:
-    state: present
-    kind: PersistentVolumeClaim
-    name: "{{ item }}"
-    namespace: "{{ project_name }}"
-    validate_certs: "{{ validate_certs }}"
-  register: pvcs
+  set_fact:
+    pvc: "{{ lookup('oc',
+                        'PersistentVolumeClaim',
+                        host=from_host,
+                        token=hostvars[from_host]['ansible_sa_token'],
+                        namespace=project_name,
+                        resource_name=item,
+                        validate_certs=validate_certs) }}"
   with_items: "{{ pvcs_to_migrate }}"
-  delegate_to: "{{ from_host }}"
-  delegate_facts: True
+  register: pvcs
 
 - name: Migrate Persistent Volume Claims
   oc:
     state: present
     namespace: "{{ dest_project_name }}"
-    inline: "{{ item.ansible_facts.oc.result | uniqueify_resource }}"
+    inline: "{{ item.ansible_facts.pvc | uniqueify_resource }}"
     validate_certs: "{{ validate_certs }}"
+    token: "{{ ansible_sa_token }}"
   with_items: "{{ pvcs.results }}"

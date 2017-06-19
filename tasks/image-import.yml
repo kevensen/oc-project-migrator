@@ -1,12 +1,17 @@
 ---
 # tasks file for kevensen.oc-project-migrator
 - block:
+
   - name: Get Image Streams
-    oc:
-      state: present
-      kind: ImageStream
-      namespace: "{{ project_name }}"
-      validate_certs: "{{ validate_certs }}"
+    set_fact:
+      image_stream: "{{ lookup('oc',
+                               'ImageStream',
+                               host=inventory_hostname,
+                               token=hostvars[inventory_hostname]['ansible_sa_token'],
+                               namespace=project_name,
+                               resource_name=item,
+                               validate_certs=validate_certs) }}"
+    with_items: "{{ image_streams_to_migrate }}"
     register: image_streams
 
   - name: Import Images
@@ -14,10 +19,10 @@
       state: present
       inline:
         kind: ImageStreamImport
-        apiVersion: "{{ image_streams.ansible_facts.oc.result.apiVersion }}"
+        apiVersion: "{{ item.ansible_facts.image_stream.apiVersion }}"
         metadata:
-          name: "{{ item.metadata.name }}"
-          namespace: "{{ item.metadata.namespace }}"
+          name: "{{ item.ansible_facts.image_stream.metadata.name }}"
+          namespace: "{{ item.ansible_facts.image_stream.metadata.namespace }}"
         spec:
           import: true
           images:
@@ -25,9 +30,10 @@
               name: latest
             from:
               kind: DockerImage
-              name: "{{ item.spec.dockerImageRepository }}"
+              name: "{{ item.ansible_facts.image_stream.spec.dockerImageRepository }}"
             importPolicy:
               insecure: "{{ insecure_image_streams }}"
-        validate_certs: "{{ validate_certs }}"
-    with_items: "{{ image_streams.ansible_facts.oc.result.item_list }}"
+      token: "{{ ansible_sa_token }}"
+      validate_certs: "{{ validate_certs }}"
+    with_items: "{{ image_streams.results }}"
   when: inventory_hostname != from_host
